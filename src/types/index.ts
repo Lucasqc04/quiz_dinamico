@@ -2,7 +2,7 @@ export interface QuizSettings {
   questionCount: number;
   optionCount: number;
   topic: string;
-  questionTypes: ('multiple' | 'truefalse')[];
+  questionTypes: ('multiple' | 'truefalse')[]; // Alterado para array de tipos
   language: string;
   includeExplanations: boolean;
 }

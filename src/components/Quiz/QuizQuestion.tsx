@@ -7,6 +7,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/Card
 import { Button } from '../ui/Button';
 import { Clock, AlertCircle, ArrowRight, Check, X } from 'lucide-react';
 
+// Adicionar esta linha para resolver o erro do namespace NodeJS
+/// <reference types="node" />
+
 export const QuizQuestion: React.FC = () => {
   const { 
     currentQuiz, 
@@ -67,6 +70,9 @@ export const QuizQuestion: React.FC = () => {
     return null;
   }
 
+  // Verificar o tipo de questão para aplicar estilos específicos
+  const isTrueFalse = currentQuestion.type === 'truefalse';
+
   const handleOptionSelect = (option: QuizOption) => {
     if (selectedOption !== null) return; // Already answered
     
@@ -93,16 +99,21 @@ export const QuizQuestion: React.FC = () => {
     
     addResult(result);
     
-    // Show explanation if applicable
-    if (settings.showExplanations === 'after' && currentQuestion.explanation) {
+    // Corrigir esta linha para usar 'depois' em vez de 'after'
+    if (settings.showExplanations === 'depois' && currentQuestion.explanation) {
       setShowExplanation(true);
     } else if (!correct && settings.restartOnError) {
       setTimeout(() => {
         endQuiz();
       }, 1500);
+    } else if (isLastQuestion) {
+      // Se for a última pergunta, finaliza o quiz automaticamente após um delay
+      setTimeout(() => {
+        endQuiz();
+      }, 1500);
     } else {
       // Auto-proceed to next question after delay if not showing explanation
-      if (!isLastQuestion && settings.showExplanations !== 'after') {
+      if (!isLastQuestion && settings.showExplanations !== 'depois') {
         setTimeout(() => {
           goToNextQuestion();
         }, 1500);
@@ -126,7 +137,12 @@ export const QuizQuestion: React.FC = () => {
       setTimeout(() => {
         endQuiz();
       }, 1500);
-    } else if (!isLastQuestion) {
+    } else if (isLastQuestion) {
+      // Se for a última questão, finalize o quiz
+      setTimeout(() => {
+        endQuiz();
+      }, 1500);
+    } else {
       setTimeout(() => {
         goToNextQuestion();
       }, 1500);
@@ -163,7 +179,8 @@ export const QuizQuestion: React.FC = () => {
         <CardHeader className="relative pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg sm:text-xl">
-              Question {currentQuestionIndex + 1} of {currentQuiz.questions.length}
+              Questão {currentQuestionIndex + 1} de {currentQuiz.questions.length}
+              {isTrueFalse && <span className="ml-2 text-sm font-normal text-gray-500">(Verdadeiro/Falso)</span>}
             </CardTitle>
             <div className="flex items-center text-sm">
               <Clock className="h-4 w-4 mr-1" />
@@ -184,7 +201,7 @@ export const QuizQuestion: React.FC = () => {
             {currentQuestion.text}
           </div>
           
-          <div className="space-y-3 mt-4">
+          <div className={isTrueFalse ? "grid grid-cols-2 gap-3 mt-4" : "space-y-3 mt-4"}>
             {currentQuestion.options.map(option => {
               const isSelected = selectedOption === option.id;
               const isCorrectOption = option.isCorrect;
@@ -202,6 +219,11 @@ export const QuizQuestion: React.FC = () => {
                 }
               }
               
+              // Adicionar classes específicas para botões de verdadeiro/falso
+              if (isTrueFalse) {
+                optionClass += ' flex items-center justify-center py-4 h-full';
+              }
+              
               return (
                 <motion.div 
                   key={option.id}
@@ -209,7 +231,7 @@ export const QuizQuestion: React.FC = () => {
                   className={`p-3 rounded-md cursor-pointer flex items-center ${optionClass}`}
                   onClick={() => selectedOption === null && handleOptionSelect(option)}
                 >
-                  <div className="flex-1">{option.text}</div>
+                  <div className="flex-1 text-center">{option.text}</div>
                   
                   {showCorrect && isCorrectOption && (
                     <Check className="h-5 w-5 text-success-500 ml-2" />
@@ -234,7 +256,7 @@ export const QuizQuestion: React.FC = () => {
                 <AlertCircle className="h-5 w-5 text-primary-500 mr-2 mt-0.5 flex-shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                    Explanation:
+                    Explicação:
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     {currentQuestion.explanation}
@@ -245,11 +267,12 @@ export const QuizQuestion: React.FC = () => {
           )}
         </CardContent>
         
-        {selectedOption !== null && (
+        {/* Só mostra o botão de próxima questão se não estiver configurado para mostrar explicações no final */}
+        {selectedOption !== null && settings.showExplanations !== 'final' && (
           <CardFooter className="flex justify-end border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
             <div className="w-full sm:w-auto">
               <Button onClick={handleNext} className="w-full">
-                {isLastQuestion ? 'Finish Quiz' : 'Next Question'}
+                {isLastQuestion ? 'Finalizar Quiz' : 'Próxima Questão'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>

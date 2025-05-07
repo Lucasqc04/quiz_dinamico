@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { TextArea } from '../ui/TextArea';
 import { Button } from '../ui/Button';
 import { AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Quiz, QuizQuestion } from '../../types';
 
 export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onImportSuccess }) => {
   const { setQuiz } = useQuiz();
@@ -23,16 +24,32 @@ export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onIm
     try {
       const result = validateQuizJson(jsonInput);
       
-      if (result.success) {
-        setQuiz(result.data);
+      if (result.success && result.data) {
+        
+        const quizData: Quiz = {
+          id: result.data.id || crypto.randomUUID(),  
+          title: result.data.title || "Quiz Sem Título",  
+          description: result.data.description,
+          language: result.data.language || 'pt-BR',
+          questions: result.data.questions.map(q => ({
+            id: q.id || crypto.randomUUID(),
+            text: q.text,
+            options: q.options,
+            explanation: q.explanation,
+            type: q.type || (q.options.length > 2 ? 'multiple' : 'truefalse')
+          } as QuizQuestion))
+        };
+        
+        setQuiz(quizData);
         setIsValid(true);
+        
         // Slight delay to show success state before transitioning
         setTimeout(() => {
           onImportSuccess();
         }, 1000);
       } else {
         const error = result.error;
-        let errorMessage = 'Invalid JSON format';
+        let errorMessage = 'Formato JSON inválido';
         
         if (error instanceof Error) {
           errorMessage = error.message;
@@ -43,7 +60,7 @@ export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onIm
         setValidationError(errorMessage);
       }
     } catch (error) {
-      setValidationError('Failed to parse JSON: ' + (error instanceof Error ? error.message : String(error)));
+      setValidationError('Falha ao analisar JSON: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsValidating(false);
     }
@@ -57,18 +74,18 @@ export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onIm
     >
       <Card className="max-w-3xl mx-auto">
         <CardHeader>
-          <CardTitle>Import Quiz JSON</CardTitle>
+          <CardTitle>Importar Quiz JSON</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <TextArea
-              label="Paste your quiz JSON here"
-              placeholder="Paste the JSON response from your AI here..."
+              label="Cole seu JSON de quiz aqui"
+              placeholder="Cole a resposta JSON da sua IA aqui..."
               rows={10}
               value={jsonInput}
               onChange={(e) => setJsonInput(e.target.value)}
               error={validationError || undefined}
-              helper="Your quiz data should be in JSON format with questions, options, and optionally explanations."
+              helper="Seus dados de quiz devem estar no formato JSON com perguntas, opções e, opcionalmente, explicações."
               required
             />
             
@@ -77,13 +94,13 @@ export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onIm
                 {isValid && (
                   <span className="text-success-500 dark:text-success-400 flex items-center">
                     <CheckCircle className="h-4 w-4 mr-1" />
-                    Valid quiz format!
+                    Formato de quiz válido!
                   </span>
                 )}
                 {validationError && (
                   <span className="text-danger-500 dark:text-danger-400 flex items-center">
                     <AlertCircle className="h-4 w-4 mr-1" />
-                    Validation failed
+                    Falha na validação
                   </span>
                 )}
               </div>
@@ -93,7 +110,7 @@ export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onIm
                 disabled={isValidating || jsonInput.trim() === ''}
                 className="flex items-center"
               >
-                {isValidating ? 'Validating...' : 'Validate & Continue'}
+                {isValidating ? 'Validando...' : 'Validar e Continuar'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -101,23 +118,23 @@ export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onIm
           
           <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-md">
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Expected JSON Format:
+              Formato JSON Esperado:
             </h3>
             <pre className="text-xs bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto">
 {`{
-  "title": "Quiz Title",
-  "description": "Optional quiz description",
+  "title": "Título do Quiz",
+  "description": "Descrição opcional do quiz",
   "questions": [
     {
-      "text": "Question text?",
+      "text": "Texto da pergunta?",
       "options": [
-        { "text": "Option 1", "isCorrect": false },
-        { "text": "Option 2", "isCorrect": true },
-        { "text": "Option 3", "isCorrect": false }
+        { "text": "Opção 1", "isCorrect": false },
+        { "text": "Opção 2", "isCorrect": true },
+        { "text": "Opção 3", "isCorrect": false }
       ],
-      "explanation": "Optional explanation for the answer"
+      "explanation": "Explicação opcional para a resposta"
     },
-    // more questions...
+    // mais questões...
   ]
 }`}
             </pre>

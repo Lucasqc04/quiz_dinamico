@@ -5,8 +5,8 @@ import { PromptForm } from '../components/PromptGenerator/PromptForm';
 export const CreatePage: React.FC = () => {
   return (
     <Container
-      title="Create Quiz Prompt"
-      subtitle="Generate a prompt to create your quiz with AI"
+      title="Criar Prompt de Quiz"
+      subtitle="Gere um prompt para criar seu quiz com IA"
     >
       <PromptForm />
     </Container>

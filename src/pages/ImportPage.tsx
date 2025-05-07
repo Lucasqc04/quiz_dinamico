@@ -9,8 +9,8 @@ interface ImportPageProps {
 export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
   return (
     <Container
-      title="Import Quiz"
-      subtitle="Paste your AI-generated quiz JSON to start"
+      title="Importar Quiz"
+      subtitle="Cole seu JSON de quiz gerado por IA para começar"
     >
       <JsonImportForm onImportSuccess={onImportSuccess} />
     </Container>

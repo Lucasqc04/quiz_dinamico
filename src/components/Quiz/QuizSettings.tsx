@@ -19,7 +19,7 @@ export const QuizSettings: React.FC = () => {
         <CardContent className="py-8">
           <div className="text-center">
             <p className="text-gray-500 dark:text-gray-400">
-              No quiz loaded. Please import a quiz first.
+              Nenhum quiz carregado. Por favor, importe um quiz primeiro.
             </p>
           </div>
         </CardContent>
@@ -39,7 +39,7 @@ export const QuizSettings: React.FC = () => {
     >
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle>Quiz Settings</CardTitle>
+          <CardTitle>Configurações do Quiz</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-md">
@@ -52,13 +52,13 @@ export const QuizSettings: React.FC = () => {
               </p>
             )}
             <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-              {currentQuiz.questions.length} questions
+              {currentQuiz.questions.length} questões
             </div>
           </div>
           
           <div className="space-y-4">
             <Input
-              label="Time per question (seconds)"
+              label="Tempo por questão (segundos)"
               type="number"
               min={5}
               max={300}
@@ -69,7 +69,7 @@ export const QuizSettings: React.FC = () => {
             />
             
             <Switch
-              label="Restart quiz on wrong answer"
+              label="Reiniciar quiz ao errar"
               checked={settings.restartOnError}
               onChange={(checked) => 
                 updateSettings({ restartOnError: checked })
@@ -77,15 +77,15 @@ export const QuizSettings: React.FC = () => {
             />
             
             <Select
-              label="Show explanations"
+              label="Mostrar explicações"
               options={[
-                { value: 'after', label: 'After each question' },
-                { value: 'end', label: 'At the end of the quiz' },
-                { value: 'never', label: 'Never' },
+                { value: 'depois', label: 'Após cada questão' },
+                { value: 'final', label: 'No final do quiz' },
+                { value: 'nunca', label: 'Nunca' },
               ]}
               value={settings.showExplanations}
               onChange={(value) => 
-                updateSettings({ showExplanations: value as 'after' | 'end' | 'never' })
+                updateSettings({ showExplanations: value as 'depois' | 'final' | 'nunca' })
               }
             />
           </div>
@@ -96,7 +96,7 @@ export const QuizSettings: React.FC = () => {
             className="w-full sm:w-auto"
           >
             <Play className="mr-2 h-4 w-4" />
-            Start Quiz
+            Iniciar Quiz
           </Button>
         </CardFooter>
       </Card>

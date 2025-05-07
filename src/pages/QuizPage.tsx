@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Container } from '../components/Layout/Container';
 import { QuizSettings } from '../components/Quiz/QuizSettings';
 import { QuizQuestion } from '../components/Quiz/QuizQuestion';
@@ -10,11 +10,15 @@ interface QuizPageProps {
 }
 
 export const QuizPage: React.FC<QuizPageProps> = ({ onStartOver }) => {
-  const { currentQuiz, isQuizActive, quizSummary } = useQuiz();
+  const { currentQuiz, isQuizActive, quizSummary, quizResults } = useQuiz();
+
+  // Verificar se todas as perguntas foram respondidas
+  const isQuizCompleted = currentQuiz && quizResults.length === currentQuiz.questions.length;
 
   // Show different components based on quiz state
   const renderContent = () => {
-    if (quizSummary) {
+    // Mostrar resultados quando tiver um resumo ou quando o quiz estiver completo e não ativo
+    if (quizSummary || (isQuizCompleted && !isQuizActive)) {
       return <QuizResults onStartOver={onStartOver} />;
     }
     
@@ -29,15 +33,15 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onStartOver }) => {
   const getPageInfo = () => {
     if (!currentQuiz) {
       return {
-        title: "Start a Quiz",
-        subtitle: "Import a quiz first to begin"
+        title: "Iniciar um Quiz",
+        subtitle: "Importe um quiz primeiro para começar"
       };
     }
     
-    if (quizSummary) {
+    if (quizSummary || (isQuizCompleted && !isQuizActive)) {
       return {
-        title: "Quiz Complete",
-        subtitle: `You've finished "${currentQuiz.title}"`
+        title: "Quiz Concluído",
+        subtitle: `Você terminou "${currentQuiz.title}"`
       };
     }
     
@@ -49,8 +53,8 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onStartOver }) => {
     }
     
     return {
-      title: "Quiz Settings",
-      subtitle: "Configure and start your quiz"
+      title: "Configurações do Quiz",
+      subtitle: "Configure e inicie seu quiz"
     };
   };
 

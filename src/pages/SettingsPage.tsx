@@ -5,8 +5,8 @@ import { UserPreferences } from '../components/Settings/UserPreferences';
 export const SettingsPage: React.FC = () => {
   return (
     <Container
-      title="Settings"
-      subtitle="Customize your quiz experience"
+      title="Configurações"
+      subtitle="Personalize sua experiência de quiz"
     >
       <UserPreferences />
     </Container>

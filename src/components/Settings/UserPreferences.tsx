@@ -19,12 +19,12 @@ export const UserPreferences: React.FC = () => {
     >
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle>User Preferences</CardTitle>
+          <CardTitle>Preferências do Usuário</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-4">
             <Input
-              label="Time per question (seconds)"
+              label="Tempo por questão (segundos)"
               type="number"
               min={5}
               max={300}
@@ -32,11 +32,11 @@ export const UserPreferences: React.FC = () => {
               onChange={(e) => 
                 updateSettings({ timePerQuestion: parseInt(e.target.value) })
               }
-              helper="How much time is allowed for each question"
+              helper="Quanto tempo é permitido para cada questão"
             />
             
             <Switch
-              label="Restart quiz on wrong answer"
+              label="Reiniciar quiz ao errar"
               checked={settings.restartOnError}
               onChange={(checked) => 
                 updateSettings({ restartOnError: checked })
@@ -44,32 +44,32 @@ export const UserPreferences: React.FC = () => {
             />
             
             <Select
-              label="Show explanations"
+              label="Mostrar explicações"
               options={[
-                { value: 'after', label: 'After each question' },
-                { value: 'end', label: 'At the end of the quiz' },
-                { value: 'never', label: 'Never' },
+                { value: 'depois', label: 'Após cada questão' },
+                { value: 'final', label: 'No final do quiz' },
+                { value: 'nunca', label: 'Nunca' },
               ]}
               value={settings.showExplanations}
               onChange={(value) => 
-                updateSettings({ showExplanations: value as 'after' | 'end' | 'never' })
+                updateSettings({ showExplanations: value as 'depois' | 'final' | 'nunca' })
               }
-              helper="When to show explanations for correct answers"
+              helper="Quando mostrar explicações para respostas corretas"
             />
           </div>
           
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
             <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-              Accessibility Settings
+              Configurações de Acessibilidade
             </h3>
             
             <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <p>Keyboard shortcuts:</p>
+              <p>Atalhos de teclado:</p>
               <ul className="list-disc pl-5 mt-1 space-y-1">
-                <li>Alt+C: Go to Create page</li>
-                <li>Alt+I: Go to Import page</li>
-                <li>Alt+Q: Go to Quiz page</li>
-                <li>Alt+S: Go to Settings page</li>
+                <li>Alt+C: Ir para página Criar</li>
+                <li>Alt+I: Ir para página Importar</li>
+                <li>Alt+Q: Ir para página Quiz</li>
+                <li>Alt+S: Ir para página Configurações</li>
               </ul>
             </div>
           </div>
@@ -81,7 +81,7 @@ export const UserPreferences: React.FC = () => {
             className="flex items-center"
           >
             <RotateCcw className="mr-2 h-4 w-4" />
-            Reset to Defaults
+            Restaurar Padrões
           </Button>
         </CardFooter>
       </Card>

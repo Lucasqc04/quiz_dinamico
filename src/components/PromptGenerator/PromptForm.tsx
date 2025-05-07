@@ -36,10 +36,20 @@ export const PromptForm: React.FC = () => {
 
   const handleQuestionTypeChange = (type: 'multiple' | 'truefalse') => {
     setSettings(prev => {
-      const types = prev.questionTypes.includes(type)
-        ? prev.questionTypes.filter(t => t !== type)
+      // Verifica se o tipo já está selecionado
+      const isSelected = prev.questionTypes.includes(type);
+      
+      // Não remove se for o último item selecionado
+      if (isSelected && prev.questionTypes.length === 1) {
+        return prev;
+      }
+      
+      // Adiciona ou remove o tipo
+      const newTypes = isSelected 
+        ? prev.questionTypes.filter(t => t !== type) 
         : [...prev.questionTypes, type];
-      return { ...prev, questionTypes: types.length ? types : [type] };
+      
+      return { ...prev, questionTypes: newTypes };
     });
   };
 
@@ -54,6 +64,9 @@ export const PromptForm: React.FC = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Determina se o número de opções deve ser ajustável
+  const showOptionCountInput = settings.questionTypes.includes('multiple');
 
   return (
     <motion.div
@@ -86,15 +99,17 @@ export const PromptForm: React.FC = () => {
                 required
               />
               
-              <Input
-                label="Opções por Questão"
-                type="number"
-                min={2}
-                max={6}
-                value={settings.optionCount}
-                onChange={(e) => handleInputChange('optionCount', parseInt(e.target.value))}
-                required
-              />
+              {showOptionCountInput && (
+                <Input
+                  label="Opções por Questão (múltipla escolha)"
+                  type="number"
+                  min={3}
+                  max={6}
+                  value={settings.optionCount}
+                  onChange={(e) => handleInputChange('optionCount', parseInt(e.target.value))}
+                  required
+                />
+              )}
             </div>
 
             <Select
@@ -120,6 +135,11 @@ export const PromptForm: React.FC = () => {
                   onChange={() => handleQuestionTypeChange('truefalse')}
                 />
               </div>
+              {settings.questionTypes.includes('multiple') && settings.questionTypes.includes('truefalse') && (
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  O quiz terá uma mistura de questões de múltipla escolha e verdadeiro/falso
+                </p>
+              )}
             </div>
             
             <div className="pt-2">
