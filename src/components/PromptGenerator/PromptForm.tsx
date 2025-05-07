@@ -13,13 +13,13 @@ import { useGeneratedContent } from '../../context/GeneratedContentContext';
 import { Tooltip } from '../ui/Tooltip';
 
 const initialSettings: QuizSettings = {
-  questionCount: 5,
-  optionCount: 4,
+  questionCount: null,
+  optionCount: null,
   topic: '',
   questionTypes: ['multiple'],
   language: 'pt-BR',
   includeExplanations: true,
-  difficulty: 'médio', // Valor padrão
+  difficulty: '', // Modificado para começar vazio
 };
 
 const languageOptions = [
@@ -29,24 +29,12 @@ const languageOptions = [
   { value: 'fr-FR', label: 'Francês' },
 ];
 
-// Opções de dificuldade pré-definidas
-const difficultyOptions = [
-  { value: 'muito fácil', label: 'Muito Fácil' },
-  { value: 'fácil', label: 'Fácil' },
-  { value: 'médio', label: 'Médio' },
-  { value: 'difícil', label: 'Difícil' },
-  { value: 'muito difícil', label: 'Muito Difícil' },
-  { value: 'variado', label: 'Níveis Variados' },
-  { value: 'personalizado', label: 'Personalizado...' },
-];
-
 interface PromptFormProps {
   onGeminiGeneration?: () => void;
 }
 
 export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) => {
   const [settings, setSettings] = useState<QuizSettings>(initialSettings);
-  const [customDifficulty, setCustomDifficulty] = useState<string>('');
   const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -56,17 +44,20 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
 
   // Função segura para lidar com mudanças de valores numéricos
   const handleNumericInputChange = (key: 'questionCount' | 'optionCount', value: string) => {
-    const numValue = parseInt(value, 10);
+    if (value === '') {
+      setSettings(prev => ({ ...prev, [key]: null }));
+      return;
+    }
     
-    if (isNaN(numValue)) return; // Ignora valores não numéricos
+    const numValue = parseInt(value, 10);
+    if (isNaN(numValue)) return;
     
     let validValue = numValue;
     
-    // Aplica limites para cada campo
     if (key === 'questionCount') {
-      validValue = Math.max(1, Math.min(20, numValue)); // Entre 1 e 20
+      validValue = Math.max(1, Math.min(20, numValue));
     } else if (key === 'optionCount') {
-      validValue = Math.max(3, Math.min(6, numValue)); // Entre 3 e 6
+      validValue = Math.max(3, Math.min(6, numValue));
     }
     
     setSettings(prev => ({ ...prev, [key]: validValue }));
@@ -80,38 +71,18 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
   // Função específica para os tipos de pergunta (checkboxes)
   const handleQuestionTypeChange = (type: 'multiple' | 'truefalse') => {
     setSettings(prev => {
-      // Verifica se o tipo já está selecionado
       const isSelected = prev.questionTypes.includes(type);
       
-      // Não remove se for o último item selecionado
       if (isSelected && prev.questionTypes.length === 1) {
         return prev;
       }
       
-      // Adiciona ou remove o tipo
       const newTypes = isSelected 
         ? prev.questionTypes.filter(t => t !== type) 
         : [...prev.questionTypes, type];
       
       return { ...prev, questionTypes: newTypes };
     });
-  };
-
-  // Função para lidar com mudança na dificuldade
-  const handleDifficultyChange = (value: string) => {
-    setSettings(prev => ({ ...prev, difficulty: value }));
-    // Resetar campo personalizado se não for a opção personalizada
-    if (value !== 'personalizado') {
-      setCustomDifficulty('');
-    }
-  };
-
-  // Função para lidar com mudança na dificuldade personalizada
-  const handleCustomDifficultyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCustomDifficulty(value);
-    // Atualizar a configuração com o valor personalizado
-    setSettings(prev => ({ ...prev, difficulty: value }));
   };
 
   // Gera apenas o prompt (sem chamar API)
@@ -153,40 +124,30 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
     setError(null);
 
     try {
-      // Gerar o prompt para enviar ao modelo
       const prompt = generateAIPrompt(settings);
       
       try {
-        // Chamar a API do OpenRouter com a estratégia de modelo selecionada
         const generatedQuiz = await generateQuizWithGemini(prompt, modelStrategy);
         
-        // Verificar se obtivemos um resultado válido
         if (!generatedQuiz || generatedQuiz.trim() === '') {
           throw new Error("A API retornou um resultado vazio");
         }
         
         try {
-          // Validar o JSON antes de prosseguir
           JSON.parse(generatedQuiz);
           
-          // Salvar o conteúdo gerado no contexto
           setGeneratedContent(generatedQuiz);
           
-          // Chamar o callback para navegar para a página de importação
           if (onGeminiGeneration) {
             onGeminiGeneration();
           }
         } catch (jsonError) {
-          // Erro na validação do JSON, mas temos um conteúdo
           setError(`O JSON gerado está inválido. Tente gerar novamente ou use o prompt manual.`);
-          // Ainda assim, vamos gerar o prompt para que o usuário possa usar manualmente
           setGeneratedPrompt(prompt);
         }
       } catch (apiError) {
-        // Erro na chamada da API
         const errorMessage = apiError instanceof Error ? apiError.message : "Erro ao gerar o quiz.";
         setError(`${errorMessage} Tente o método manual: gere o prompt e cole-o em uma IA como o ChatGPT.`);
-        // Gerar o prompt para uso manual
         setGeneratedPrompt(prompt);
       }
     } catch (err) {
@@ -198,7 +159,6 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
     }
   };
 
-  // Estratégias de modelo disponíveis para o dropdown
   const modelStrategyOptions = [
     { value: 'balanced', label: 'Equilibrado (Recomendado)' },
     { value: 'speed', label: 'Priorizar Velocidade' },
@@ -206,7 +166,6 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
     { value: 'reliable-json', label: 'Foco em JSON correto' }
   ];
 
-  // Determina se o número de opções deve ser ajustável
   const showOptionCountInput = settings.questionTypes.includes('multiple');
 
   return (
@@ -235,8 +194,10 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
                 type="number"
                 min={1}
                 max={20}
-                value={settings.questionCount}
+                value={settings.questionCount ?? ''}
                 onChange={(e) => handleNumericInputChange('questionCount', e.target.value)}
+                onFocus={(e) => e.target.value === '' && setSettings(prev => ({ ...prev, questionCount: null }))}
+                placeholder="1-20"
                 required
               />
               
@@ -246,8 +207,10 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
                   type="number"
                   min={3}
                   max={6}
-                  value={settings.optionCount}
+                  value={settings.optionCount ?? ''}
                   onChange={(e) => handleNumericInputChange('optionCount', e.target.value)}
+                  onFocus={(e) => e.target.value === '' && setSettings(prev => ({ ...prev, optionCount: null }))}
+                  placeholder="3-6"
                   required
                 />
               )}
@@ -261,23 +224,14 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
                 onChange={(value) => handleInputChange('language', value)}
               />
               
-              <Select
+              <Input
                 label="Nível de Dificuldade"
-                options={difficultyOptions}
-                value={settings.difficulty === customDifficulty && settings.difficulty !== 'personalizado' ? 'personalizado' : settings.difficulty}
-                onChange={handleDifficultyChange}
+                placeholder="Ex: Fácil, Médio, Difícil, Avançado..."
+                value={settings.difficulty}
+                onChange={(e) => handleInputChange('difficulty', e.target.value)}
+                required
               />
             </div>
-            
-            {settings.difficulty === 'personalizado' && (
-              <Input
-                label="Descreva o nível de dificuldade"
-                placeholder="Ex: Adequado para estudantes do ensino médio"
-                value={customDifficulty}
-                onChange={handleCustomDifficultyChange}
-                required={settings.difficulty === 'personalizado'}
-              />
-            )}
             
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -310,7 +264,6 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
               />
             </div>
             
-            {/* Botão principal para gerar prompt - FLUXO RECOMENDADO */}
             <div className="mt-6">
               <Button 
                 type="submit" 
@@ -330,7 +283,6 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
               </div>
             )}
 
-            {/* MOVIDO: Caixa de prompt gerado aparece aqui agora */}
             {generatedPrompt && (
               <motion.div 
                 className="mt-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-md relative"
@@ -358,7 +310,6 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
               </motion.div>
             )}
             
-            {/* Seção de geração com IA - Agora aparece DEPOIS da caixa de prompt */}
             <div className="mt-8 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
               <div className="flex items-center mb-4">
                 <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">

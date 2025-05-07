@@ -1,6 +1,6 @@
 export interface QuizSettings {
-  questionCount: number;
-  optionCount: number;
+  questionCount: number | null;
+  optionCount: number | null;
   topic: string;
   questionTypes: ('multiple' | 'truefalse')[];
   language: string;
