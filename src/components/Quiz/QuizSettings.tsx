@@ -75,6 +75,22 @@ export const QuizSettings: React.FC = () => {
                 updateSettings({ restartOnError: checked })
               }
             />
+
+            <Switch
+              label="Embaralhar ordem das questões"
+              checked={settings.shuffleQuestions}
+              onChange={(checked) => 
+                updateSettings({ shuffleQuestions: checked })
+              }
+            />
+
+            <Switch
+              label="Embaralhar ordem das opções"
+              checked={settings.shuffleOptions}
+              onChange={(checked) => 
+                updateSettings({ shuffleOptions: checked })
+              }
+            />
             
             <Select
               label="Mostrar explicações"

@@ -23,7 +23,7 @@ import { FaTelegramPlane} from 'react-icons/fa';
 import { FaXTwitter } from "react-icons/fa6";
 
 export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver }) => {
-  const { currentQuiz, quizResults, quizSummary, setQuizSummary, resetQuiz } = useQuiz();
+  const { currentQuiz, quizResults, quizSummary, setQuizSummary, resetQuiz, quizHistory } = useQuiz();
   const { settings } = useSettings();
   const [showHistory, setShowHistory] = useState(false);
   const resultCardRef = useRef<HTMLDivElement>(null);
@@ -37,6 +37,7 @@ export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver
       
       setQuizSummary({
         quizId: currentQuiz.id,
+        quizTitle: currentQuiz.title || 'Quiz sem título',
         totalQuestions: currentQuiz.questions.length,
         correctAnswers: correctAnswers,
         totalTime: totalTime,
@@ -189,9 +190,56 @@ export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver
                   <CardDescription>Suas tentativas anteriores</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-                    Funcionalidade de histórico em desenvolvimento
-                  </p>
+                  {quizHistory.length > 0 ? (
+                    <div className="space-y-4">
+                      {quizHistory
+                        .filter(summary => summary.quizId === currentQuiz?.id)
+                        .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+                        .map((summary, index) => {
+                          const score = Math.round((summary.correctAnswers / summary.totalQuestions) * 100);
+                          const date = new Date(summary.completedAt).toLocaleDateString();
+                          const time = new Date(summary.completedAt).toLocaleTimeString();
+                          
+                          return (
+                            <div 
+                              key={summary.completedAt}
+                              className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium text-gray-900 dark:text-white">
+                                    {summary.quizTitle}
+                                  </h4>
+                                  <p className="font-medium">Tentativa {quizHistory.length - index}</p>
+                                  <p className="text-sm text-gray-500">{date} às {time}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className={`text-lg font-bold ${
+                                    score >= 70 ? 'text-success-600 dark:text-success-400' :
+                                    score >= 40 ? 'text-warning-600 dark:text-warning-400' :
+                                    'text-danger-600 dark:text-danger-400'
+                                  }`}>
+                                    {score}%
+                                  </p>
+                                  <p className="text-sm text-gray-500">
+                                    {summary.correctAnswers}/{summary.totalQuestions} corretas
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="mt-2 text-sm text-gray-500">
+                                <Clock className="inline-block h-4 w-4 mr-1" />
+                                Tempo total: {formatTime(summary.totalTime)}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <History className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Nenhuma tentativa anterior registrada para este quiz.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

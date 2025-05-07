@@ -17,7 +17,8 @@ export const QuizQuestion: React.FC = () => {
     isQuizActive, 
     goToNextQuestion, 
     addResult, 
-    endQuiz
+    endQuiz,
+    quizResults
   } = useQuiz();
   const { settings } = useSettings();
   
@@ -76,10 +77,8 @@ export const QuizQuestion: React.FC = () => {
   const handleOptionSelect = (option: QuizOption) => {
     if (selectedOption !== null) return; // Already answered
     
-    // Stop the timer
     if (timerId.current) clearInterval(timerId.current);
     
-    // Calculate time taken
     const timeTaken = Math.min(
       Math.round((Date.now() - startTime.current) / 1000),
       settings.timePerQuestion
@@ -89,7 +88,6 @@ export const QuizQuestion: React.FC = () => {
     setSelectedOption(option.id);
     setIsCorrect(correct);
     
-    // Create result
     const result: QuizResult = {
       questionId: currentQuestion.id,
       selectedOptionId: option.id,
@@ -97,22 +95,30 @@ export const QuizQuestion: React.FC = () => {
       timeTaken: timeTaken,
     };
     
+    // Adicionar o resultado e verificar se é a última questão
     addResult(result);
     
-    // Corrigir esta linha para usar 'depois' em vez de 'after'
+    // Se errou e está configurado para voltar ao início
+    if (!correct && settings.restartOnError) {
+      if (settings.showExplanations === 'depois') {
+        setShowExplanation(true);
+      } else {
+        setTimeout(() => {
+          endQuiz([...quizResults, result]); // Passar todos os resultados incluindo o atual
+        }, 1500);
+      }
+      return;
+    }
+
+    // Mostra explicação se configurado
     if (settings.showExplanations === 'depois' && currentQuestion.explanation) {
       setShowExplanation(true);
-    } else if (!correct && settings.restartOnError) {
-      setTimeout(() => {
-        endQuiz();
-      }, 1500);
     } else if (isLastQuestion) {
-      // Se for a última pergunta, finaliza o quiz automaticamente após um delay
+      // Importante: Passar explicitamente todos os resultados, incluindo o atual
       setTimeout(() => {
-        endQuiz();
+        endQuiz([...quizResults, result]);
       }, 1500);
     } else {
-      // Auto-proceed to next question after delay if not showing explanation
       if (!isLastQuestion && settings.showExplanations !== 'depois') {
         setTimeout(() => {
           goToNextQuestion();
@@ -135,12 +141,12 @@ export const QuizQuestion: React.FC = () => {
     
     if (settings.restartOnError) {
       setTimeout(() => {
-        endQuiz();
+        endQuiz([...quizResults, result]); // Passar todos os resultados incluindo o atual
       }, 1500);
     } else if (isLastQuestion) {
-      // Se for a última questão, finalize o quiz
+      // Passar explicitamente todos os resultados
       setTimeout(() => {
-        endQuiz();
+        endQuiz([...quizResults, result]);
       }, 1500);
     } else {
       setTimeout(() => {
@@ -151,7 +157,11 @@ export const QuizQuestion: React.FC = () => {
 
   const handleNext = () => {
     if (isLastQuestion) {
-      endQuiz();
+      // Se é a última questão, garantir que o resultado atual seja incluído
+      const currentResult = quizResults.find(r => r.questionId === currentQuestion.id);
+      if (currentResult) {
+        endQuiz([...quizResults]); // Usar todos os resultados atuais
+      }
     } else {
       goToNextQuestion();
     }
@@ -267,16 +277,22 @@ export const QuizQuestion: React.FC = () => {
           )}
         </CardContent>
         
-        {/* Só mostra o botão de próxima questão se não estiver configurado para mostrar explicações no final */}
-        {selectedOption !== null && settings.showExplanations !== 'final' && (
-          <CardFooter className="flex justify-end border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
-            <div className="w-full sm:w-auto">
-              <Button onClick={handleNext} className="w-full">
-                {isLastQuestion ? 'Finalizar Quiz' : 'Próxima Questão'}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </CardFooter>
+        {/* Modificar a condição do CardFooter */}
+        {selectedOption !== null && settings.showExplanations !== 'nunca' && (
+          settings.showExplanations === 'depois' ? (
+            <CardFooter className="flex justify-end border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+              <div className="w-full sm:w-auto">
+                <Button onClick={handleNext} className="w-full">
+                  {!isCorrect && settings.restartOnError ? (
+                    'Configurar Quiz'
+                  ) : (
+                    isLastQuestion ? 'Finalizar Quiz' : 'Próxima Questão'
+                  )}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </CardFooter>
+          ) : null
         )}
       </Card>
     </motion.div>

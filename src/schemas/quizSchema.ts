@@ -11,7 +11,8 @@ const quizOptionSchema = z.object({
 const quizQuestionSchema = z.object({
   id: z.string().optional(),
   text: z.string().min(3, "A questão deve ter pelo menos 3 caracteres"),
-  options: z.array(quizOptionSchema).min(2, "São necessárias pelo menos 2 opções"),
+  options: z.array(quizOptionSchema).min(2, "São necessárias pelo menos 2 opções")
+    .max(8, "Máximo de 8 opções permitido"), // Atualizado para 8 opções
   explanation: z.string().optional(),
   type: z.enum(['multiple', 'truefalse']).optional(),
 }).transform(data => ({
@@ -30,7 +31,9 @@ export const quizSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, "O título deve ter pelo menos 3 caracteres"),
   description: z.string().optional(),
-  questions: z.array(quizQuestionSchema).min(1, "É necessária pelo menos 1 questão"),
+  questions: z.array(quizQuestionSchema)
+    .min(1, "É necessária pelo menos 1 questão")
+    .max(30, "Máximo de 30 questões permitido"), // Atualizado para 30 questões
   language: z.string().optional()
 }).transform(data => ({
   ...data,

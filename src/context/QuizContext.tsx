@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Quiz, QuizResult, QuizSummary } from '../types';
 import { saveToStorage, getFromStorage } from '../utils/storage';
+import { useSettings } from './SettingsContext';
+import { shuffleArray } from '../utils/arrayUtils';
 
 // Chaves para armazenamento no localStorage
 const STORAGE_KEYS = {
@@ -19,7 +21,7 @@ interface QuizContextType {
   quizHistory: QuizSummary[];
   setQuiz: (quiz: Quiz) => void;
   startQuiz: () => void;
-  endQuiz: () => void;
+  endQuiz: (finalResults?: QuizResult[]) => void;
   goToNextQuestion: () => void;
   goToPreviousQuestion: () => boolean;
   addResult: (result: QuizResult) => void;
@@ -53,6 +55,11 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getFromStorage<QuizSummary[]>(STORAGE_KEYS.QUIZ_HISTORY, [])
   );
 
+  // Ref para evitar duplicação do resumo no histórico
+  const lastSummaryAdded = useRef<string | null>(null);
+
+  const { settings } = useSettings();
+
   // Salvar no localStorage sempre que os estados mudarem
   useEffect(() => {
     if (currentQuiz) {
@@ -66,52 +73,75 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [quizResults]);
 
-  useEffect(() => {
-    if (quizSummary) {
-      saveToStorage(STORAGE_KEYS.QUIZ_SUMMARY, quizSummary);
-      // Adiciona ao histórico quando um novo resumo é criado
-      if (!quizHistory.some(summary => summary.completedAt === quizSummary.completedAt)) {
-        const updatedHistory = [...quizHistory, quizSummary];
-        setQuizHistory(updatedHistory);
-        saveToStorage(STORAGE_KEYS.QUIZ_HISTORY, updatedHistory);
-      }
-    }
-  }, [quizSummary]);
-
   const setQuiz = (quiz: Quiz) => {
     setCurrentQuiz(quiz);
     resetQuiz();
   };
 
   const startQuiz = () => {
+    if (!currentQuiz) return;
+
+    let processedQuiz = { ...currentQuiz };
+
+    // Embaralhar questões se a configuração estiver ativada
+    if (settings.shuffleQuestions) {
+      processedQuiz = {
+        ...processedQuiz,
+        questions: shuffleArray([...processedQuiz.questions])
+      };
+    }
+
+    // Embaralhar opções de cada questão se a configuração estiver ativada
+    if (settings.shuffleOptions) {
+      processedQuiz = {
+        ...processedQuiz,
+        questions: processedQuiz.questions.map(question => ({
+          ...question,
+          options: shuffleArray([...question.options])
+        }))
+      };
+    }
+
+    setCurrentQuiz(processedQuiz);
     setIsQuizActive(true);
     setCurrentQuestionIndex(0);
     setQuizResults([]);
     setQuizSummaryState(null);
-    // Limpar armazenamento de resultados anteriores
     saveToStorage(STORAGE_KEYS.QUIZ_RESULTS, []);
     saveToStorage(STORAGE_KEYS.QUIZ_SUMMARY, null);
   };
 
-  const endQuiz = () => {
+  // Modificação na função endQuiz para garantir resultados corretos
+  const endQuiz = (finalResults?: QuizResult[]) => {
     setIsQuizActive(false);
     
-    // Criar automaticamente o resumo do quiz quando ele terminar
-    if (currentQuiz && quizResults.length > 0) {
-      const correctAnswers = quizResults.filter(result => result.isCorrect).length;
-      const totalTime = quizResults.reduce((sum, result) => sum + result.timeTaken, 0);
-      
-      const summary: QuizSummary = {
-        quizId: currentQuiz.id,
-        totalQuestions: currentQuiz.questions.length,
-        correctAnswers: correctAnswers,
-        totalTime: totalTime,
-        results: quizResults,
-        completedAt: new Date().toISOString()
-      };
-      
-      setQuizSummaryState(summary);
-    }
+    if (!currentQuiz) return;
+    
+    // Garantir que temos resultados para processar
+    const resultsToProcess = finalResults || quizResults;
+    
+    if (resultsToProcess.length === 0) return;
+    
+    // Calcular estatísticas usando os resultados finais
+    const correctAnswers = resultsToProcess.filter(result => result.isCorrect).length;
+    const totalTime = resultsToProcess.reduce((sum, result) => sum + result.timeTaken, 0);
+    
+    const summary: QuizSummary = {
+      quizId: currentQuiz.id,
+      quizTitle: currentQuiz.title,
+      totalQuestions: currentQuiz.questions.length,
+      correctAnswers: correctAnswers,
+      totalTime: totalTime,
+      results: resultsToProcess,
+      completedAt: new Date().toISOString()
+    };
+    
+    // Salvar resumo e atualizar histórico
+    setQuizSummaryState(summary);
+    const updatedHistory = [...quizHistory, summary];
+    setQuizHistory(updatedHistory);
+    saveToStorage(STORAGE_KEYS.QUIZ_HISTORY, updatedHistory);
+    saveToStorage(STORAGE_KEYS.QUIZ_SUMMARY, summary);
   };
 
   const goToNextQuestion = () => {
@@ -134,17 +164,19 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
+  // Modificação na função addResult para melhorar sincronização
   const addResult = (result: QuizResult) => {
     const updatedResults = [...quizResults, result];
+    
+    // Atualiza o estado e storage imediatamente
     setQuizResults(updatedResults);
     saveToStorage(STORAGE_KEYS.QUIZ_RESULTS, updatedResults);
     
-    // Verifica se todas as perguntas foram respondidas
+    // Verifica se é a última questão
     if (currentQuiz && updatedResults.length === currentQuiz.questions.length) {
-      // Finalize o quiz automaticamente se todas as perguntas foram respondidas
-      setTimeout(() => {
-        endQuiz();
-      }, 1000);
+      // Importante: usamos updatedResults diretamente para garantir que todos
+      // os resultados sejam incluídos ao finalizar o quiz
+      endQuiz(updatedResults);
     }
   };
 

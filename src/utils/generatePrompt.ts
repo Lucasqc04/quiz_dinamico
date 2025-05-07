@@ -11,17 +11,20 @@ export const generateAIPrompt = (settings: QuizSettings): string => {
     difficulty 
   } = settings;
   
+  // Utiliza valor seguro para optionCount
+  const safeOptionCount = optionCount ?? 0;
+  
   // Verificar se há mais de um tipo de questão
   const hasMixedTypes = questionTypes.length > 1;
   
   // Texto para a descrição do tipo de questões
   let questionTypeText;
   if (hasMixedTypes) {
-    questionTypeText = `uma mistura de questões de múltipla escolha com ${optionCount} opções e questões de verdadeiro/falso`;
+    questionTypeText = `${questionCount} questões, sendo uma mistura de questões de múltipla escolha com ${safeOptionCount} opções e questões de verdadeiro/falso`;
   } else if (questionTypes.includes('multiple')) {
-    questionTypeText = `questões de múltipla escolha com ${optionCount} opções cada`;
+    questionTypeText = `${questionCount} questões de múltipla escolha com ${safeOptionCount} opções cada`;
   } else {
-    questionTypeText = 'questões de verdadeiro/falso';
+    questionTypeText = `${questionCount} questões de verdadeiro/falso`;
   }
   
   // Texto sobre as explicações
@@ -42,7 +45,7 @@ Use o campo "type" em cada questão para indicar o tipo:
 - Para questões de verdadeiro/falso, use: "type": "truefalse" (estas devem ter exatamente 2 opções)`;
   }
   
-  return `Crie um quiz sobre "${topic}" com ${questionCount} ${questionTypeText} no idioma ${language === 'pt-BR' ? 'português do Brasil' : language}. ${difficultyText} ${explanationsText}${mixedTypesInstruction}
+  return `Crie um quiz sobre "${topic}" contendo ${questionTypeText} no idioma ${language === 'pt-BR' ? 'português do Brasil' : language}. ${difficultyText} ${explanationsText}${mixedTypesInstruction}
 
 Por favor, formate sua resposta como um objeto JSON com a seguinte estrutura:
 {
@@ -54,7 +57,7 @@ Por favor, formate sua resposta como um objeto JSON com a seguinte estrutura:
       "type": "${hasMixedTypes ? 'multiple ou truefalse' : questionTypes[0]}",
       "options": [
         { "text": "Opção 1", "isCorrect": false },
-        { "text": "Opção 2", "isCorrect": true }${questionTypes.includes('multiple') ? ',\n        { "text": "Opção 3", "isCorrect": false }' : ''}${questionTypes.includes('multiple') && optionCount > 3 ? ',\n        { "text": "Opção 4", "isCorrect": false }' : ''}
+        { "text": "Opção 2", "isCorrect": true }${questionTypes.includes('multiple') ? ',\n        { "text": "Opção 3", "isCorrect": false }' : ''}${questionTypes.includes('multiple') && safeOptionCount > 3 ? ',\n        { "text": "Opção 4", "isCorrect": false }' : ''}
       ]${includeExplanations ? ',\n      "explanation": "Explicação para a resposta correta aqui."' : ''}
     }
   ]

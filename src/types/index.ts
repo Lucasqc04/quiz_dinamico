@@ -14,6 +14,7 @@ export interface UserPreferences {
   showExplanations: 'depois' | 'final' | 'nunca';
   theme: 'light' | 'dark';
   shuffleQuestions: boolean;
+  shuffleOptions: boolean;
 }
 
 export interface QuizOption {
@@ -47,9 +48,11 @@ export interface QuizResult {
 
 export interface QuizSummary {
   quizId: string;
+  quizTitle: string; // Novo campo para o título
   totalQuestions: number;
   correctAnswers: number;
   totalTime: number;
   results: QuizResult[];
   completedAt: string;
+  tentativeNumber?: number; // Opcional, pode ser calculado dinamicamente
 }

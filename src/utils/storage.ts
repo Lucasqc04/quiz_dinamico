@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   USER_PREFERENCES: 'quiz-app-preferences',
   SAVED_QUIZZES: 'quiz-app-saved-quizzes',
   QUIZ_HISTORY: 'quiz-app-history',
+  LAST_GENERATOR_CONFIG: 'quiz-app-last-generator-config', // Nova chave
 };
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -12,6 +13,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   showExplanations: 'depois',
   theme: 'light',
   shuffleQuestions: false,
+  shuffleOptions: false, // Nova configuração
 };
 
 export const getUserPreferences = (): UserPreferences => {
@@ -54,4 +56,22 @@ export const getFromStorage = <T>(key: string, defaultValue: T): T => {
     console.error(`Error reading data from localStorage key ${key}:`, error);
     return defaultValue;
   }
+};
+
+export interface LastGeneratorConfig {
+  questionCount: number | null;
+  optionCount: number | null;
+  difficulty: string;
+}
+
+export const getLastGeneratorConfig = (): LastGeneratorConfig => {
+  return getFromStorage<LastGeneratorConfig>(STORAGE_KEYS.LAST_GENERATOR_CONFIG, {
+    questionCount: null,
+    optionCount: null,
+    difficulty: '',
+  });
+};
+
+export const saveLastGeneratorConfig = (config: LastGeneratorConfig): void => {
+  saveToStorage(STORAGE_KEYS.LAST_GENERATOR_CONFIG, config);
 };
