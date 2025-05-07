@@ -61,7 +61,7 @@ INSTRUÇÕES DE FORMATO:
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
           'HTTP-Referer': window.location.origin,
-          'X-Title': 'QuizMaster',
+          'X-Title': 'HastyQuiz',
         },
         body: JSON.stringify({
           model,

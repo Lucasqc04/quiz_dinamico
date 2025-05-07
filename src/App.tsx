@@ -56,7 +56,7 @@ function AppContent() {
         {renderPage()}
       </main>
       <footer className="py-4 px-4 text-center text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
-        <p>© 2025 QuizMaster - Seu Aplicativo de Quiz com IA</p>
+        <p>© 2025 HastyQuiz - Seu Aplicativo de Quiz com IA</p>
       </footer>
     </div>
   );

@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onPageChange, currentPage }) => 
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <BrainCircuit className="h-8 w-8 text-primary-600 dark:text-primary-500" />
-            <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">QuizMaster</span>
+            <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">HastyQuiz</span>
           </div>
 
           <div className="flex items-center space-x-4">

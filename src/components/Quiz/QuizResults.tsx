@@ -1,17 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useQuiz } from '../../context/QuizContext';
 import { useSettings } from '../../context/SettingsContext';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Check, X, Clock, RotateCcw, ArrowLeft, Award, Star, Trophy, ArrowUp, History, Save } from 'lucide-react';
-
+import { 
+  Check, X, Clock, RotateCcw, ArrowLeft, History, 
+  Share, Download, ChevronDown, Camera
+} from 'lucide-react';
+import { ResultCard } from './ResultCard';
+import { generateImage, saveImage, shareImage } from '../../utils/imageUtils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '../ui/DropdownMenu';
+import { toast } from '../ui/Toast';
+import { FaTelegramPlane} from 'react-icons/fa';
+import { FaXTwitter } from "react-icons/fa6";
 
 export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver }) => {
   const { currentQuiz, quizResults, quizSummary, setQuizSummary, resetQuiz } = useQuiz();
   const { settings } = useSettings();
   const [showHistory, setShowHistory] = useState(false);
+  const resultCardRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // Cria um resumo se não existir ainda
   useEffect(() => {
@@ -46,43 +62,59 @@ export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver
   // Se temos resultados, mostra-os
   if (quizResults.length > 0) {
     const correctAnswers = quizResults.filter(result => result.isCorrect).length;
-    return renderResults(correctAnswers, currentQuiz.questions.length, quizResults.reduce((sum, result) => sum + result.timeTaken, 0), quizResults);
-  }
-
-  // Caso de fallback - não deveria acontecer, mas para garantir
-  return (
-    <Card className="max-w-3xl mx-auto">
-      <CardContent className="py-8 text-center">
-        <p className="text-gray-500 dark:text-gray-400">
-          Complete o quiz para ver os resultados.
-        </p>
-        <Button onClick={resetQuiz} className="mt-4">
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Configurar Quiz
-        </Button>
-      </CardContent>
-    </Card>
-  );
-
-  // Função para renderizar os resultados com dados fornecidos
-  function renderResults(correctAnswers: number, totalQuestions: number, totalTime: number, results: any[]) {
-    const score = Math.round((correctAnswers / totalQuestions) * 100);
-
-    // Função para determinar a cor com base na pontuação
-    const getScoreColorClass = () => {
-      if (score >= 90) return 'text-green-600 dark:text-green-400';
-      if (score >= 70) return 'text-emerald-600 dark:text-emerald-400';
-      if (score >= 50) return 'text-yellow-600 dark:text-yellow-400';
-      if (score >= 30) return 'text-orange-600 dark:text-orange-400';
-      return 'text-red-600 dark:text-red-400';
+    const totalTime = quizResults.reduce((sum, result) => sum + result.timeTaken, 0);
+    const score = Math.round((correctAnswers / currentQuiz.questions.length) * 100);
+    
+    // Funções para lidar com a imagem
+    const handleSaveImage = async () => {
+      if (!resultCardRef.current) return;
+      
+      try {
+        setIsGeneratingImage(true);
+        const dataUrl = await generateImage(resultCardRef.current);
+        saveImage(dataUrl, `quiz-resultado-${currentQuiz.title || 'quiz'}.png`);
+        toast({
+          title: "Imagem salva",
+          description: "Sua imagem foi salva com sucesso!",
+          variant: "success",
+        });
+      } catch (error) {
+        console.error('Erro ao salvar imagem:', error);
+        toast({
+          title: "Erro ao salvar",
+          description: "Não foi possível salvar a imagem. Tente novamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsGeneratingImage(false);
+      }
     };
-
-    // Função para determinar o ícone com base na pontuação
-    const getScoreIcon = () => {
-      if (score >= 90) return <Trophy className="h-8 w-8 mb-2" />;
-      if (score >= 70) return <Award className="h-8 w-8 mb-2" />;
-      if (score >= 50) return <Star className="h-8 w-8 mb-2" />;
-      return <ArrowUp className="h-8 w-8 mb-2" />;
+    
+    const handleShareImage = async (platform?: 'whatsapp' | 'telegram' | 'x' | 'facebook') => {
+      if (!resultCardRef.current) return;
+      
+      try {
+        setIsGeneratingImage(true);
+        const dataUrl = await generateImage(resultCardRef.current);
+        const quizTitle = currentQuiz.title || 'Quiz';
+        const shareText = `Consegui ${score}% de acertos no ${quizTitle}! Veja meu resultado!`;
+        
+        await shareImage(dataUrl, `Resultado: ${quizTitle}`, shareText, platform);
+        toast({
+          title: "Compartilhado",
+          description: "Seu resultado foi compartilhado com sucesso!",
+          variant: "success",
+        });
+      } catch (error) {
+        console.error('Erro ao compartilhar:', error);
+        toast({
+          title: "Erro ao compartilhar",
+          description: "Não foi possível compartilhar sua imagem. Tente novamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsGeneratingImage(false);
+      }
     };
 
     // Efeito para disparar confetti se a pontuação for alta
@@ -121,23 +153,6 @@ export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver
         return () => clearInterval(interval);
       }
     }, [score]);
-
-    const formatTime = (seconds: number) => {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-    };
-
-    // Feedback personalizado baseado na pontuação
-    const getFeedbackMessage = () => {
-      if (score >= 90) return "Excelente! Você é um mestre neste assunto!";
-      if (score >= 80) return "Incrível! Seu conhecimento é impressionante!";
-      if (score >= 70) return "Muito bom! Você tem um sólido entendimento.";
-      if (score >= 60) return "Bom trabalho! Você está no caminho certo.";
-      if (score >= 50) return "Bom esforço! Continue praticando para melhorar.";
-      if (score >= 40) return "Continue tentando! Você pode melhorar com prática.";
-      return "Não desista! Tente novamente para melhorar sua pontuação.";
-    };
 
     return (
       <motion.div
@@ -183,68 +198,74 @@ export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver
           )}
         </AnimatePresence>
 
-        {/* Novo card de resumo destacado */}
+        {/* Novo cartão de resultado destacado */}
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mb-6"
         >
-          <Card className="overflow-hidden border-2 border-primary-500 dark:border-primary-400 shadow-lg">
-            <div className="bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 text-white p-6 text-center">
-              <h2 className="text-2xl font-bold mb-1">Parabéns por completar o quiz!</h2>
-              <p className="text-primary-100">
-                Você respondeu {correctAnswers} de {totalQuestions} questões corretamente
-              </p>
-            </div>
+          <ResultCard 
+            ref={resultCardRef}
+            score={score}
+            correctAnswers={correctAnswers}
+            totalQuestions={currentQuiz.questions.length}
+            totalTime={totalTime}
+            quizTitle={currentQuiz.title}
+          />
+
+          {/* Botões de compartilhamento e salvamento */}
+          <div className="mt-4 flex flex-wrap gap-2 justify-center">
+            <Button
+              variant="outline"
+              onClick={handleSaveImage}
+              disabled={isGeneratingImage}
+              className="flex items-center"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Salvar Resultado
+            </Button>
             
-            <CardContent className="p-6 flex flex-col items-center">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className={`text-4xl font-bold ${getScoreColorClass()}`}>
-                    {score}%
-                  </span>
-                </div>
-                
-                <svg viewBox="0 0 36 36" className="w-32 h-32">
-                  <path
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="#eee"
-                    strokeWidth="3"
-                    className="stroke-gray-200 dark:stroke-gray-700"
-                  />
-                  <path
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    strokeDasharray="100, 100"
-                    strokeDashoffset={100 - score}
-                    strokeLinecap="round"
-                    strokeWidth="3"
-                    className={score >= 90 ? 'stroke-green-500' : 
-                            score >= 70 ? 'stroke-emerald-500' : 
-                            score >= 50 ? 'stroke-yellow-500' : 
-                            score >= 30 ? 'stroke-orange-500' : 
-                            'stroke-red-500'}
-                  />
-                </svg>
-              </div>
-              
-              <div className="text-center mt-4">
-                <p className="font-medium text-lg mb-2">
-                  {getFeedbackMessage()}
-                </p>
-                <div className="flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                  <Clock className="h-4 w-4 mr-1" />
-                  <span>Tempo total: {formatTime(totalTime)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  disabled={isGeneratingImage}
+                  className="flex items-center"
+                >
+                  <Share className="mr-2 h-4 w-4" />
+                  Compartilhar
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleShareImage()}>
+                  <Camera className="mr-2 h-4 w-4" />
+                  Compartilhar Imagem
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleShareImage('whatsapp')}>
+                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="#25D366">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShareImage('telegram')}>
+                  <FaTelegramPlane className="mr-2 h-4 w-4 text-[#0088cc]" />
+                  Telegram
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShareImage('x')}>
+                  <FaXTwitter className="mr-2 h-4 w-4 text-[#ffffff]" />
+                  X
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShareImage('facebook')}>
+                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="#1877F2">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  Facebook
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </motion.div>
         
         <Card>
@@ -272,7 +293,7 @@ export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver
                 transition={{ duration: 0.3, delay: 0.2 }}
               >
                 <Clock className="h-6 w-6 mx-auto text-primary-500 mb-2" />
-                <div className="text-lg font-semibold">{formatTime(Math.round(totalTime / totalQuestions))}</div>
+                <div className="text-lg font-semibold">{formatTime(Math.round(totalTime / currentQuiz.questions.length))}</div>
                 <p className="text-xs text-gray-500">Tempo Médio por Questão</p>
               </motion.div>
             </div>
@@ -280,7 +301,7 @@ export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver
             <div className="space-y-4 mt-6">
               <h3 className="font-medium text-gray-900 dark:text-white">Resumo das Questões</h3>
               
-              {results.map((result, index) => {
+              {quizResults.map((result, index) => {
                 const question = currentQuiz?.questions.find(q => q.id === result.questionId);
                 if (!question) return null;
                 
@@ -357,26 +378,39 @@ export const QuizResults: React.FC<{ onStartOver: () => void }> = ({ onStartOver
               Voltar ao Início
             </Button>
             
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={resetQuiz}
-                className="w-full sm:w-auto"
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Configurar Quiz
-              </Button>
-              
-              <Button
-                className="w-full sm:w-auto"
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Salvar Resultados
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={resetQuiz}
+              className="w-full sm:w-auto"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Configurar Quiz
+            </Button>
           </CardFooter>
         </Card>
       </motion.div>
     );
   }
+
+  // Caso de fallback - não deveria acontecer, mas para garantir
+  return (
+    <Card className="max-w-3xl mx-auto">
+      <CardContent className="py-8 text-center">
+        <p className="text-gray-500 dark:text-gray-400">
+          Complete o quiz para ver os resultados.
+        </p>
+        <Button onClick={resetQuiz} className="mt-4">
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Configurar Quiz
+        </Button>
+      </CardContent>
+    </Card>
+  );
 };
+
+// Função auxiliar para formatar o tempo
+function formatTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+}

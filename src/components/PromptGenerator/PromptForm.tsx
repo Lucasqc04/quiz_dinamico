@@ -282,31 +282,31 @@ export const PromptForm: React.FC<PromptFormProps> = ({ onGeminiGeneration }) =>
               />
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:gap-4">
               <Button 
                 type="submit" 
-                className="flex-1 bg-primary-600 hover:bg-primary-700"  /* Destacado como recomendado */
+                className="w-full sm:w-auto bg-primary-600 hover:bg-primary-700 py-3 text-sm sm:text-base flex items-center justify-center"
                 disabled={!settings.topic || settings.topic.trim() === ''}
               >
-                <span className="mr-1">✓</span> Gerar Prompt (Recomendado)
+                <span className="mr-2">✓</span> Gerar Prompt (Recomendado)
               </Button>
               
               <Button 
                 type="button" 
                 variant="secondary" 
-                className="flex-1 flex items-center justify-center"
+                className="w-full sm:w-auto py-3 text-sm sm:text-base flex items-center justify-center"
                 onClick={handleGenerateWithGemini}
                 disabled={isGenerating || !settings.topic || settings.topic.trim() === ''}
               >
                 {isGenerating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                 ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
+                  <Sparkles className="h-5 w-5 mr-2" />
                 )}
                 {isGenerating ? 'Gerando...' : (
                   <>
                     Gerar com Deepseek
-                    <span className="ml-1.5 text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-1.5 py-0.5 rounded-full">BETA</span>
+                    <span className="ml-2 text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-0.5 rounded-full">BETA</span>
                   </>
                 )}
               </Button>
