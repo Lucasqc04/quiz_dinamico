@@ -15,25 +15,140 @@ export interface OpenRouterError {
   status?: number;
 }
 
-export async function generateQuizWithGemini(prompt: string): Promise<string> {
-  // Chave de API do OpenRouter
-  const OPENROUTER_API_KEY = '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';
-  
+// Tipo para representar os modelos disponíveis com suas características
+export interface AIModel {
+  id: string;         // ID do modelo para a API
+  name: string;       // Nome amigável para exibição
+  speed: 'rápido' | 'médio' | 'lento'; // Velocidade relativa
+  quality: 'básica' | 'boa' | 'excelente'; // Qualidade das respostas
+  description: string; // Descrição curta do modelo
+}
+
+// Modelos disponíveis categorizados
+export const availableModels: AIModel[] = [
+  {
+    id: 'google/gemini-2.0-flash-exp:free',
+    name: 'Gemini Flash',
+    speed: 'rápido',
+    quality: 'boa',
+    description: 'Rápido e eficiente, boas respostas na maioria dos casos.'
+  },
+  {
+    id: 'google/gemini-2.5-pro-exp-03-25:free',
+    name: 'Gemini Pro',
+    speed: 'médio',
+    quality: 'excelente',
+    description: 'Excelente qualidade, bom equilíbrio entre velocidade e precisão.'
+  },
+  {
+    id: 'deepseek/deepseek-r1:free',
+    name: 'DeepSeek R1',
+    speed: 'médio',
+    quality: 'excelente',
+    description: 'Mais preciso para tarefas complexas e estruturadas.'
+  },
+  {
+    id: 'deepseek/deepseek-v3-base:free',
+    name: 'DeepSeek Base',
+    speed: 'rápido',
+    quality: 'boa',
+    description: 'Bom desempenho geral para quizzes de dificuldade média.'
+  },
+  {
+    id: 'tngtech/deepseek-r1t-chimera:free',
+    name: 'DeepSeek Chimera',
+    speed: 'lento',
+    quality: 'excelente',
+    description: 'Excelente para formatar corretamente o JSON e conteúdo detalhado.'
+  },
+  {
+    id: 'meta-llama/llama-3.1-8b-instruct:free',
+    name: 'Llama 3.1 (8B)',
+    speed: 'rápido',
+    quality: 'básica',
+    description: 'Mais rápido, mas com respostas mais simples.'
+  },
+  {
+    id: 'meta-llama/llama-3.3-nemotron-super-49b-v1:free',
+    name: 'Llama 3.3 Nemotron',
+    speed: 'lento',
+    quality: 'excelente',
+    description: 'Grande modelo de linguagem com excelente qualidade de conteúdo.'
+  },
+  {
+    id: 'shisa-ai/shisa-v2-llama3.3-70b:free',
+    name: 'Shisa V2 (70B)',
+    speed: 'lento',
+    quality: 'excelente',
+    description: 'Modelo grande com alta precisão e raciocínio avançado.'
+  }
+];
+
+// Diferentes estratégias de ordenação pré-definidas
+export type ModelStrategy = 'balanced' | 'speed' | 'quality' | 'reliable-json';
+
+export function getModelsByStrategy(strategy: ModelStrategy): string[] {
+  switch (strategy) {
+    case 'speed':
+      // Prioriza velocidade sobre qualidade
+      return availableModels
+        .sort((a, b) => {
+          const speedOrder = {'rápido': 0, 'médio': 1, 'lento': 2};
+          return speedOrder[a.speed] - speedOrder[b.speed];
+        })
+        .map(model => model.id);
+    
+    case 'quality':
+      // Prioriza qualidade sobre velocidade
+      return availableModels
+        .sort((a, b) => {
+          const qualityOrder = {'excelente': 0, 'boa': 1, 'básica': 2};
+          return qualityOrder[a.quality] - qualityOrder[b.quality];
+        })
+        .map(model => model.id);
+    
+    case 'reliable-json':
+      // Prioriza modelos que entregam JSON mais consistente
+      return [
+        'tngtech/deepseek-r1t-chimera:free',
+        'deepseek/deepseek-r1:free',
+        'google/gemini-2.5-pro-exp-03-25:free',
+        'deepseek/deepseek-v3-base:free',
+        'shisa-ai/shisa-v2-llama3.3-70b:free',
+        'meta-llama/llama-3.3-nemotron-super-49b-v1:free',
+        'google/gemini-2.0-flash-exp:free',
+        'meta-llama/llama-3.1-8b-instruct:free',
+      ];
+    
+    case 'balanced':
+    default:
+      // Estratégia padrão equilibrada
+      return [
+        'deepseek/deepseek-v3-base:free',
+        'google/gemini-2.0-flash-exp:free',
+        'deepseek/deepseek-r1:free',
+        'google/gemini-2.5-pro-exp-03-25:free',
+        'tngtech/deepseek-r1t-chimera:free',
+        'meta-llama/llama-3.1-8b-instruct:free',
+        'meta-llama/llama-3.3-nemotron-super-49b-v1:free',
+        'shisa-ai/shisa-v2-llama3.3-70b:free'
+      ];
+  }
+}
+
+export async function generateQuizWithGemini(prompt: string, strategy: ModelStrategy = 'balanced'): Promise<string> {
+  const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+
+  console.log(`Estratégia selecionada: ${strategy}`);
+
   if (!OPENROUTER_API_KEY) {
-    throw new Error("API key do OpenRouter não encontrada.");
+    throw new Error("API key do OpenRouter não encontrada. Certifique-se de configurá-la como variável de ambiente.");
   }
 
-  // Lista ATUALIZADA com modelos REALMENTE disponíveis no OpenRouter (verificados)
-  const models = [
-    'deepseek/deepseek-r1:free',
-    'google/gemini-2.5-pro-exp-03-25:free',
-    'google/gemini-2.0-flash-exp:free',
-    'deepseek/deepseek-r1t-chimera:free',
-    'deepseek/deepseek-v3-0324:free',
-    'meta-llama/llama-3.1-8b-instruct:free',
-    'meta-llama/llama-3.3-nemotron-super-49b-v1:free',
-    'shisa-ai/shisa-v2-llama3.3-70b:free'
-  ];
+  // Obter a lista de modelos ordenados pela estratégia escolhida
+  const models = getModelsByStrategy(strategy);
+
+  console.log("Chave de API carregada:", OPENROUTER_API_KEY);  
 
   let lastError: Error | null = null;
   let successfulModel = '';
@@ -144,171 +259,13 @@ INSTRUÇÕES DE FORMATO:
 }
 
 /**
- * Extrai e repara o conteúdo JSON de uma string,
- * lidando com diversos problemas comuns de formatação
+ * Extrai o conteúdo JSON presente entre a primeira e a última chave.
  */
 function extractAndRepairJson(text: string): string {
-  try {
-    // Remover qualquer texto antes da primeira chave e após a última chave
-    let firstBraceIndex = text.indexOf('{');
-    let lastBraceIndex = text.lastIndexOf('}');
-    
-    if (firstBraceIndex === -1 || lastBraceIndex === -1) {
-      // Se não encontrar chaves, tente encontrar em blocos de código
-      const codeBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/;
-      const match = text.match(codeBlockRegex);
-      if (match && match[1]) {
-        text = match[1].trim();
-        firstBraceIndex = text.indexOf('{');
-        lastBraceIndex = text.lastIndexOf('}');
-        
-        // Se ainda não encontrar, lance um erro
-        if (firstBraceIndex === -1 || lastBraceIndex === -1) {
-          throw new Error("Não foi possível encontrar um objeto JSON na resposta");
-        }
-      } else {
-        throw new Error("Não foi possível encontrar um objeto JSON na resposta");
-      }
-    }
-    
-    // Extrair apenas o conteúdo entre chaves
-    let jsonContent = text.substring(firstBraceIndex, lastBraceIndex + 1);
-    
-    // Correção para problemas comuns em JSON gerado por LLMs
-    
-    // 1. Corrigir type: multiple sem aspas (erro comum)
-    jsonContent = jsonContent.replace(/("type"\s*:\s*)multiple/g, '$1"multiple"');
-    
-    // 2. Corrigir type: truefalse sem aspas
-    jsonContent = jsonContent.replace(/("type"\s*:\s*)truefalse/g, '$1"truefalse"');
-    
-    // 3. Corrigir questões no singular quando deveriam estar no plural
-    if (jsonContent.includes('"question":') && !jsonContent.includes('"questions":')) {
-      jsonContent = jsonContent.replace(/"question":/g, '"questions":');
-    }
-    
-    // 4. Corrigir vírgulas extras no final de arrays ou objetos
-    jsonContent = jsonContent.replace(/,(\s*[\]}])/g, '$1');
-    
-    // 5. Adicionar vírgulas faltantes entre objetos em arrays
-    jsonContent = jsonContent.replace(/}(\s*){/g, '},$1{');
-    
-    // 6. Corrigir aspas duplas não escapadas dentro de strings
-    // (Esta é uma simplificação, uma solução completa seria mais complexa)
-    jsonContent = fixNestedQuotes(jsonContent);
-    
-    // Tentar validar o JSON para identificar outros problemas
-    try {
-      JSON.parse(jsonContent);
-    } catch (e) {
-      console.warn("Problema na validação do JSON reparado:", e);
-      console.log("JSON com problemas:", jsonContent);
-      
-      // Se ainda tiver problemas, tente estratégias mais agressivas de limpeza
-      // Isso pode deformar o conteúdo, mas é uma tentativa de recuperação
-      jsonContent = attemptJsonRecovery(jsonContent);
-    }
-    
-    return jsonContent;
-  } catch (error) {
-    console.error("Erro ao extrair e reparar JSON:", error);
-    console.log("Texto original:", text);
-    
-    // Retornar o texto original como último recurso
-    return text;
+  const firstBraceIndex = text.indexOf('{');
+  const lastBraceIndex = text.lastIndexOf('}');
+  if (firstBraceIndex === -1 || lastBraceIndex === -1) {
+    throw new Error("Não foi possível encontrar um objeto JSON na resposta");
   }
-}
-
-/**
- * Tenta consertar o problema de aspas aninhadas em strings JSON
- */
-function fixNestedQuotes(json: string): string {
-  // Esta é uma solução simplificada que funciona para muitos casos
-  // Identifica padrões como: "text": "Este é um "exemplo" de texto"
-  
-  // Mantém controle de quando estamos dentro de uma string
-  let inString = false;
-  let result = '';
-  let lastChar = '';
-  
-  for (let i = 0; i < json.length; i++) {
-    const char = json[i];
-    
-    // Se encontrar aspas e não estiver escapado
-    if (char === '"' && lastChar !== '\\') {
-      // Alterna o estado de estar dentro/fora de uma string
-      inString = !inString;
-      
-      // Se estamos dentro de uma string e a próxima aspas não for o fechamento
-      if (inString) {
-        let nextQuotePos = json.indexOf('"', i + 1);
-        while (nextQuotePos > 0 && json[nextQuotePos - 1] === '\\') {
-          nextQuotePos = json.indexOf('"', nextQuotePos + 1);
-        }
-        
-        if (nextQuotePos > 0) {
-          // Verifica se há aspas não escapadas entre o início e o fim da string
-          const substring = json.substring(i + 1, nextQuotePos);
-          if (substring.includes('"') && !substring.includes('\\"')) {
-            // Substitui aspas internas por aspas escapadas
-            const fixedSubstring = substring.replace(/"/g, '\\"');
-            result += '"' + fixedSubstring + '"';
-            i = nextQuotePos;
-            inString = false;
-            continue;
-          }
-        }
-      }
-    }
-    
-    result += char;
-    lastChar = char;
-  }
-  
-  return result;
-}
-
-/**
- * Tenta estratégias mais agressivas para recuperar JSON inválido
- */
-function attemptJsonRecovery(json: string): string {
-  // Tenta identificar objetos de alto nível e reconstruir o JSON
-  try {
-    // 1. Remover caracteres especiais que possam estar causando problemas
-    let cleaned = json.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
-    
-    // 2. Tentar validar novamente
-    try {
-      JSON.parse(cleaned);
-      return cleaned; // Se funcionar, retorne a versão limpa
-    } catch (e) {
-      // Continuar com outras estratégias
-    }
-    
-    // 3. Verificar se a estrutura do objeto questões está correta
-    const questionsMatch = cleaned.match(/"questions"\s*:\s*\[([\s\S]*?)\]/);
-    if (questionsMatch && questionsMatch[1]) {
-      // Tentar reparar o array de questões
-      let questions = questionsMatch[1];
-      
-      // Adicionar vírgulas faltantes entre objetos
-      questions = questions.replace(/}(\s*){/g, '},$1{');
-      
-      // Remover vírgulas extras no final
-      questions = questions.replace(/,(\s*$)/g, '');
-      
-      // Reconstruir o JSON
-      const beforeQuestions = cleaned.substring(0, questionsMatch.index);
-      const afterQuestions = questionsMatch && questionsMatch.index !== undefined
-        ? cleaned.substring(questionsMatch.index + questionsMatch[0].length)
-        : '';
-      
-      cleaned = `${beforeQuestions}"questions": [${questions}]${afterQuestions}`;
-    }
-    
-    return cleaned;
-  } catch (error) {
-    console.error("Falha na recuperação do JSON:", error);
-    return json; // Retornar original se tudo falhar
-  }
+  return text.substring(firstBraceIndex, lastBraceIndex + 1);
 }
