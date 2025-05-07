@@ -2,9 +2,10 @@ export interface QuizSettings {
   questionCount: number;
   optionCount: number;
   topic: string;
-  questionTypes: ('multiple' | 'truefalse')[]; // Alterado para array de tipos
+  questionTypes: ('multiple' | 'truefalse')[];
   language: string;
   includeExplanations: boolean;
+  difficulty: string; // Novo campo para nível de dificuldade
 }
 
 export interface UserPreferences {

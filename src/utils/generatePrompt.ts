@@ -1,7 +1,15 @@
 import { QuizSettings } from '../types';
 
 export const generateAIPrompt = (settings: QuizSettings): string => {
-  const { questionCount, optionCount, topic, questionTypes, includeExplanations, language } = settings;
+  const { 
+    questionCount, 
+    optionCount, 
+    topic, 
+    questionTypes, 
+    includeExplanations, 
+    language,
+    difficulty 
+  } = settings;
   
   // Verificar se há mais de um tipo de questão
   const hasMixedTypes = questionTypes.length > 1;
@@ -16,9 +24,15 @@ export const generateAIPrompt = (settings: QuizSettings): string => {
     questionTypeText = 'questões de verdadeiro/falso';
   }
   
+  // Texto sobre as explicações
   const explanationsText = includeExplanations 
     ? 'Por favor, inclua uma explicação para cada resposta.' 
     : 'Não é necessário incluir explicações para as respostas.';
+  
+  // Texto sobre o nível de dificuldade
+  const difficultyText = difficulty === 'variado' 
+    ? 'Crie questões com diferentes níveis de dificuldade, desde muito fáceis até muito difíceis.' 
+    : `O nível de dificuldade deve ser "${difficulty}".`;
   
   let mixedTypesInstruction = '';
   if (hasMixedTypes) {
@@ -28,7 +42,7 @@ Use o campo "type" em cada questão para indicar o tipo:
 - Para questões de verdadeiro/falso, use: "type": "truefalse" (estas devem ter exatamente 2 opções)`;
   }
   
-  return `Crie um quiz sobre "${topic}" com ${questionCount} ${questionTypeText} no idioma ${language === 'pt-BR' ? 'português do Brasil' : language}. ${explanationsText}${mixedTypesInstruction}
+  return `Crie um quiz sobre "${topic}" com ${questionCount} ${questionTypeText} no idioma ${language === 'pt-BR' ? 'português do Brasil' : language}. ${difficultyText} ${explanationsText}${mixedTypesInstruction}
 
 Por favor, formate sua resposta como um objeto JSON com a seguinte estrutura:
 {
@@ -50,5 +64,6 @@ Certifique-se de que:
 1. Cada questão tenha exatamente uma resposta correta
 2. O conteúdo seja preciso e educativo
 3. O JSON esteja formatado corretamente e seja válido
-4. Questões de verdadeiro/falso tenham exatamente 2 opções${hasMixedTypes ? '\n5. O campo "type" esteja presente em todas as questões' : ''}`;
+4. Questões de verdadeiro/falso tenham exatamente 2 opções${hasMixedTypes ? '\n5. O campo "type" esteja presente em todas as questões' : ''}
+6. As questões atendam ao nível de dificuldade solicitado: "${difficulty}"`;
 };

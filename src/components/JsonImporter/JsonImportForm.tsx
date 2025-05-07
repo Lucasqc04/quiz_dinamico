@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { validateQuizJson } from '../../schemas/quizSchema';
 import { useQuiz } from '../../context/QuizContext';
+import { useGeneratedContent } from '../../context/GeneratedContentContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { TextArea } from '../ui/TextArea';
 import { Button } from '../ui/Button';
@@ -10,19 +11,35 @@ import { Quiz, QuizQuestion } from '../../types';
 
 export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onImportSuccess }) => {
   const { setQuiz } = useQuiz();
+  const { generatedContent, clearGeneratedContent } = useGeneratedContent();
   const [jsonInput, setJsonInput] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [isValid, setIsValid] = useState(false);
+  const [autoValidateTriggered, setAutoValidateTriggered] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Quando receber conteúdo gerado, preencher automaticamente o campo de entrada
+  useEffect(() => {
+    if (generatedContent && !autoValidateTriggered) {
+      setJsonInput(generatedContent);
+      setAutoValidateTriggered(true);
+      
+      // Opcional: validar automaticamente após um breve atraso
+      const timer = setTimeout(() => {
+        handleValidate(generatedContent);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [generatedContent]);
+
+  const handleValidate = (content: string) => {
     setIsValidating(true);
     setValidationError(null);
     setIsValid(false);
 
     try {
-      const result = validateQuizJson(jsonInput);
+      const result = validateQuizJson(content);
       
       if (result.success && result.data) {
         
@@ -42,6 +59,9 @@ export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onIm
         
         setQuiz(quizData);
         setIsValid(true);
+        
+        // Limpar o conteúdo gerado após uso bem-sucedido
+        clearGeneratedContent();
         
         // Slight delay to show success state before transitioning
         setTimeout(() => {
@@ -64,6 +84,11 @@ export const JsonImportForm: React.FC<{ onImportSuccess: () => void }> = ({ onIm
     } finally {
       setIsValidating(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleValidate(jsonInput);
   };
 
   return (

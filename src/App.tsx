@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { QuizProvider, useQuiz } from './context/QuizContext';
+import { GeneratedContentProvider } from './context/GeneratedContentContext';
 import { Navbar } from './components/Layout/Navbar';
 import { CreatePage } from './pages/CreatePage';
 import { ImportPage } from './pages/ImportPage';
@@ -15,6 +16,11 @@ function AppContent() {
   // Navigate to quiz page when a quiz is imported
   const handleImportSuccess = () => {
     setCurrentPage('quiz');
+  };
+  
+  // Navigate to import page when content is generated with Gemini
+  const handleGeminiGeneration = () => {
+    setCurrentPage('import');
   };
   
   // Reset to create page
@@ -39,7 +45,7 @@ function AppContent() {
       case 'settings':
         return <SettingsPage />;
       default:
-        return <CreatePage />;
+        return <CreatePage onGeminiGeneration={handleGeminiGeneration} />;
     }
   };
 
@@ -61,7 +67,9 @@ function App() {
     <ThemeProvider>
       <SettingsProvider>
         <QuizProvider>
-          <AppContent />
+          <GeneratedContentProvider>
+            <AppContent />
+          </GeneratedContentProvider>
         </QuizProvider>
       </SettingsProvider>
     </ThemeProvider>
